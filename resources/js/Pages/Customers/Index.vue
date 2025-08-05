@@ -9,7 +9,7 @@ const props = defineProps({
     customers: Object,
     filters: Object,
 });
-
+// Estado reactivo para el campo de búsqueda
 const search = ref(props.filters.search || '');
 
 watch(search, debounce((value) => {
@@ -18,48 +18,53 @@ watch(search, debounce((value) => {
         replace: true,
     });
 }, 300));
-
-// --- FUNCIÓN CORREGIDA PARA MÁXIMA COMPATIBILIDAD ---
+// Función para formatear fechas de manera robusta
 const formatDate = (dateString) => {
     if (!dateString || typeof dateString !== 'string') {
         return 'N/A';
     }
-
     const parts = dateString.split('-');
     if (parts.length !== 3) {
         return 'Fecha no válida';
     }
-
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
     const day = parseInt(parts[2], 10);
-
     if (isNaN(year) || isNaN(month) || isNaN(day)) {
         return 'Fecha no válida';
     }
-
-    // Creamos la fecha explícitamente en UTC para evitar problemas de zona horaria.
     const date = new Date(Date.UTC(year, month - 1, day));
-
     if (isNaN(date.getTime())) {
         return 'Fecha no válida';
     }
-    
-    const options = { 
-        year: 'numeric', 
-        month: 'long', 
+    const options = {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
-        timeZone: 'UTC' // Usamos UTC para el formateo para evitar desplazamientos de día.
+        timeZone: 'UTC'
     };
-    
-    // Especificamos 'es' para asegurar los nombres de los meses en español.
     return date.toLocaleDateString('es', options);
 };
-// ----------------------------------------------------
-
+// Navegación de paginación
 const goToPage = (url) => {
     if (url) {
         router.get(url, { search: search.value }, { preserveState: true, replace: true });
+    }
+};
+//Verifica si la visita está pendiente (hoy o pasada)
+const isVisitPending = (customer) => {
+    if (!customer.next_visit) return true; // Si nunca se ha agendado, se puede marcar
+    const nextVisitDate = new Date(customer.next_visit);
+    const today = new Date();
+    // La visita está pendiente si la fecha de próxima visita es hoy o ya pasó
+    return nextVisitDate <= today;
+};
+// Confirma la visita y actualiza las fechas
+const confirmVisit = (customer) => {
+    if (!customer.visit_confirmed) {
+        router.patch(route('customers.confirmVisit', customer.id), {}, {
+            preserveScroll: true,
+        });
     }
 };
 
@@ -91,7 +96,10 @@ const confirmDelete = (customer) => {
                             class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-1/3"
                         />
                         <div class="flex space-x-2">
-                            <Link :href="route('customers.import.create')" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500 focus:bg-green-500 active:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            <a :href="route('customers.export')" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-500 focus:bg-green-500 active:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                Descargar Excel
+                            </a>
+                            <Link :href="route('customers.import.create')" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 focus:bg-blue-500 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                 Subir Excel
                             </Link>
                             <Link :href="route('customers.create')" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
@@ -111,6 +119,9 @@ const confirmDelete = (customer) => {
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Nacimiento</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs. Telemarketing</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obs. Asesor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Visita</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Próxima Visita</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Visita Realizada</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                 </tr>
                             </thead>
@@ -128,10 +139,23 @@ const confirmDelete = (customer) => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(customer.birthday) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{{ customer.telemarketing_observations }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{{ customer.advisor_observations }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(customer.last_visit) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(customer.next_visit) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <input
+                                            type="checkbox"
+                                            :checked="customer.visit_confirmed"
+                                            @change="confirmVisit(customer)"
+                                            :disabled="customer.visit_confirmed"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:opacity-50"
+                                        />
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Link :href="route('customers.show', customer.id)" class="text-blue-600 hover:text-blue-900 mr-2">Ver</Link>
-                                        <Link :href="route('customers.edit', customer.id)" class="text-indigo-600 hover:text-indigo-900 mr-2">Editar</Link>
-                                        <button @click="confirmDelete(customer)" class="text-red-600 hover:text-red-900">Eliminar</button>
+                                        <div class="flex space-x-2">
+                                            <Link :href="route('customers.show', customer.id)" class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs">Ver</Link>
+                                            <Link :href="route('customers.edit', customer.id)" class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs">Editar</Link>
+                                            <button @click="confirmDelete(customer)" class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">Eliminar</button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -140,7 +164,7 @@ const confirmDelete = (customer) => {
 
                     <!-- Paginación -->
                     <nav v-if="customers.links.length > 3" class="mt-4 flex justify-between items-center" aria-label="Pagination">
-                         <div class="flex-1 flex justify-between sm:justify-end">
+                        <div class="flex-1 flex justify-between sm:justify-end">
                             <button
                                 @click="goToPage(customers.prev_page_url)"
                                 :disabled="!customers.prev_page_url"

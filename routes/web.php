@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerImportController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,9 +18,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+     ->middleware(['auth', 'verified'])
+     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
      Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -36,8 +37,12 @@ Route::middleware('auth')->group(function () {
      Route::get('/customers/import', [CustomerImportController::class, 'create'])->name('customers.import.create');
      Route::post('/customers/import', [CustomerImportController::class, 'store'])->name('customers.import.store');
 
+     Route::get('/customers/export', [CustomerController::class, 'export'])->name('customers.export');
+     Route::patch('/customers/{customer}/confirm-visit', [CustomerController::class, 'confirmVisit'])->name('customers.confirmVisit');
      // --- 2. Rutas Genéricas (Resource) DESPUÉS ---
      Route::resource('customers', CustomerController::class);
+
+     
 });
 
 require __DIR__.'/auth.php';

@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Exports\CustomersExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon; // Asegúrate de que Carbon está importado
 
 class CustomerController extends Controller
 {
@@ -13,17 +16,44 @@ class CustomerController extends Controller
       */
      public function index(Request $request)
      {
-          $search = $request->input('search');
-
           $customers = Customer::query()
-               ->when($search, function ($query, $search) {
-                    $query->where('full_name', 'like', '%' . $search . '%')
-                         ->orWhere('email', 'like', '%' . $search . '%')
-                         ->orWhere('mobile_phone', 'like', '%' . $search . '%')
-                         ->orWhere('customer_id', 'like', '%' . $search . '%');
+               ->when($request->input('search'), function ($query, $search) {
+                    $query->where('full_name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%")
+                         ->orWhere('home_phone', 'like', "%{$search}%")
+                         ->orWhere('mobile_phone', 'like', "%{$search}%")
+                         ->orWhere('work_phone', 'like', "%{$search}%")
+                         ->orWhere('customer_id', 'like', "%{$search}%");
                })
-               ->orderBy('full_name')
-               ->paginate(10);
+               ->paginate(10)
+               ->withQueryString()
+               // --- LÓGICA DE RESETEO AUTOMÁTICO AÑADIDA AQUÍ ---
+               ->through(function ($customer) {
+                    $isConfirmedForUI = $customer->visit_confirmed;
+
+                    // Si la visita está marcada como confirmada en la BD...
+                    if ($customer->visit_confirmed && $customer->next_visit) {
+                         // ...pero la fecha de la próxima visita ya pasó...
+                         if (Carbon::parse($customer->next_visit)->isPast()) {
+                              // ...entonces para la UI, la consideramos "no confirmada" (pendiente de nuevo).
+                              $isConfirmedForUI = false;
+                         }
+                    }
+
+                    return [
+                         'id' => $customer->id,
+                         'customer_id' => $customer->customer_id,
+                         'full_name' => $customer->full_name,
+                         'email' => $customer->email,
+                         'mobile_phone' => $customer->mobile_phone,
+                         'birthday' => $customer->birthday,
+                         'telemarketing_observations' => $customer->telemarketing_observations,
+                         'advisor_observations' => $customer->advisor_observations,
+                         'last_visit' => $customer->last_visit,
+                         'next_visit' => $customer->next_visit,
+                         'visit_confirmed' => $isConfirmedForUI, // Enviamos el estado calculado
+                    ];
+               });
 
           return Inertia::render('Customers/Index', [
                'customers' => $customers,
@@ -32,16 +62,35 @@ class CustomerController extends Controller
      }
 
      /**
-      * Muestra el formulario para crear un nuevo cliente.
+      * Exporta los clientes a un archivo Excel.
       */
+     public function export()
+     {
+          return Excel::download(new CustomersExport, 'clientes.xlsx');
+     }
+
+     /**
+      * Confirma una visita, actualiza la última visita y programa la siguiente.
+      */
+     public function confirmVisit(Customer $customer)
+     {
+          // --- LÓGICA CORREGIDA ---
+          $customer->update([
+               'visit_confirmed' => true, // Se marca como TRUE para este ciclo
+               'last_visit' => Carbon::now(),
+               'next_visit' => Carbon::now()->addMonths(6),
+          ]);
+
+          return back()->with('success', 'Visita confirmada y reagendada exitosamente.');
+     }
+
+     // ... (El resto de tus métodos: create, store, show, etc. se mantienen igual) ...
+
      public function create()
      {
           return Inertia::render('Customers/Create');
      }
 
-     /**
-      * Almacena un nuevo cliente en la base de datos.
-      */
      public function store(Request $request)
      {
           $validatedData = $request->validate([
@@ -52,6 +101,8 @@ class CustomerController extends Controller
                'birthday' => 'nullable|date',
                'telemarketing_observations' => 'nullable|string',
                'advisor_observations' => 'nullable|string',
+               'last_visit' => 'nullable|date',
+               'next_visit' => 'nullable|date',
           ]);
 
           Customer::create($validatedData);
@@ -59,9 +110,6 @@ class CustomerController extends Controller
           return redirect()->route('customers.index')->with('success', 'Cliente creado exitosamente.');
      }
 
-     /**
-      * Muestra los detalles de un cliente específico.
-      */
      public function show(Customer $customer)
      {
           return Inertia::render('Customers/Show', [
@@ -69,9 +117,6 @@ class CustomerController extends Controller
           ]);
      }
 
-     /**
-      * Muestra el formulario para editar un cliente existente.
-      */
      public function edit(Customer $customer)
      {
           return Inertia::render('Customers/Edit', [
@@ -79,9 +124,6 @@ class CustomerController extends Controller
           ]);
      }
 
-     /**
-      * Actualiza un cliente existente en la base de datos.
-      */
      public function update(Request $request, Customer $customer)
      {
           $validatedData = $request->validate([
@@ -92,18 +134,15 @@ class CustomerController extends Controller
                'birthday' => 'nullable|date',
                'telemarketing_observations' => 'nullable|string',
                'advisor_observations' => 'nullable|string',
+               'last_visit' => 'nullable|date',
+               'next_visit' => 'nullable|date',
           ]);
 
           $customer->update($validatedData);
 
-          // ESTA LÍNEA ES CRUCIAL:
-          // Redirige a la página de índice para forzar la recarga de la lista de clientes.
           return redirect()->route('customers.index')->with('success', 'Cliente actualizado exitosamente.');
      }
 
-     /**
-      * Elimina un cliente de la base de datos.
-      */
      public function destroy(Customer $customer)
      {
           $customer->delete();

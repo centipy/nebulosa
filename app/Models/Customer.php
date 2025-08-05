@@ -54,6 +54,9 @@ class Customer extends Model
           'birthday',
           'telemarketing_observations',
           'advisor_observations',
+          'last_visit',
+          'next_visit',
+          'visit_confirmed',
      ];
 
      /**

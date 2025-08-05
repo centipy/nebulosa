@@ -1,17 +1,46 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     customer: Object, // El objeto cliente que se pasa desde el controlador
 });
 
-// Función para formatear fechas
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+// Función para formatear las etiquetas (keys) para que sean más legibles
+const formatLabel = (key) => {
+    // Reemplaza guiones bajos con espacios y capitaliza cada palabra
+    return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
+
+// Función para formatear los valores (maneja fechas, nulos, etc.)
+const formatValue = (key, value) => {
+    if (value === null || value === '') {
+        return 'N/A';
+    }
+    // Si el campo es una fecha conocida, la formatea
+    if (['birthday', 'date_increased', 'closing_date', 'original_order_date', 'last_purchase_date', 'last_payment_date', 'created_at', 'updated_at'].includes(key)) {
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return value; // Si no es una fecha válida, devuelve el original
+        return date.toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+    }
+    return value;
+};
+
+// Propiedad computada para filtrar y ordenar los campos que queremos mostrar
+const displayableCustomer = computed(() => {
+    if (!props.customer) return {};
+    
+    // Excluimos campos que no son útiles para el usuario final
+    const excludedKeys = ['id'];
+    
+    return Object.entries(props.customer)
+        .filter(([key]) => !excludedKeys.includes(key))
+        .reduce((obj, [key, value]) => {
+            obj[key] = value;
+            return obj;
+        }, {});
+});
 </script>
 
 <template>
@@ -25,48 +54,14 @@ const formatDate = (dateString) => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">Información General</h3>
-                        <div class="mt-2 border-t border-gray-200">
-                            <dl class="divide-y divide-gray-200">
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">ID Cliente</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.customer_id }}</dd>
-                                </div>
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Nombre Completo</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.full_name }}</dd>
-                                </div>
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Correo Electrónico</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.email }}</dd>
-                                </div>
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Teléfono Móvil</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.mobile_phone }}</dd>
-                                </div>
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Fecha de Nacimiento</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ formatDate(customer.birthday) }}</dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">Observaciones</h3>
-                        <div class="mt-2 border-t border-gray-200">
-                            <dl class="divide-y divide-gray-200">
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Obs. Telemarketing</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.telemarketing_observations || 'N/A' }}</dd>
-                                </div>
-                                <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Obs. Asesor</dt>
-                                    <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.advisor_observations || 'N/A' }}</dd>
-                                </div>
-                            </dl>
-                        </div>
+                    <div class="border-t border-gray-200">
+                        <dl class="divide-y divide-gray-200">
+                            <!-- Bucle dinámico para mostrar todos los campos del cliente -->
+                            <div v-for="(value, key) in displayableCustomer" :key="key" class="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+                                <dt class="text-sm font-medium leading-6 text-gray-900">{{ formatLabel(key) }}</dt>
+                                <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ formatValue(key, value) }}</dd>
+                            </div>
+                        </dl>
                     </div>
 
                     <div class="mt-6 flex justify-end">
