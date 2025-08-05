@@ -19,15 +19,55 @@ watch(search, debounce((value) => {
     });
 }, 300));
 
+// --- FUNCIÓN CORREGIDA PARA MÁXIMA COMPATIBILIDAD ---
 const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString || typeof dateString !== 'string') {
+        return 'N/A';
+    }
+
+    const parts = dateString.split('-');
+    if (parts.length !== 3) {
+        return 'Fecha no válida';
+    }
+
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+        return 'Fecha no válida';
+    }
+
+    // Creamos la fecha explícitamente en UTC para evitar problemas de zona horaria.
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (isNaN(date.getTime())) {
+        return 'Fecha no válida';
+    }
+    
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        timeZone: 'UTC' // Usamos UTC para el formateo para evitar desplazamientos de día.
+    };
+    
+    // Especificamos 'es' para asegurar los nombres de los meses en español.
+    return date.toLocaleDateString('es', options);
 };
+// ----------------------------------------------------
 
 const goToPage = (url) => {
     if (url) {
         router.get(url, { search: search.value }, { preserveState: true, replace: true });
+    }
+};
+
+const confirmDelete = (customer) => {
+    if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.full_name}?`)) {
+        router.delete(route('customers.destroy', customer.id), {
+            preserveScroll: true,
+        });
     }
 };
 </script>
@@ -89,8 +129,9 @@ const goToPage = (url) => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{{ customer.telemarketing_observations }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{{ customer.advisor_observations }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <Link :href="route('customers.show', customer.id)" class="text-blue-600 hover:text-blue-900 mr-2">Ver</Link>
                                         <Link :href="route('customers.edit', customer.id)" class="text-indigo-600 hover:text-indigo-900 mr-2">Editar</Link>
-                                        <Link :href="route('customers.destroy', customer.id)" method="delete" as="button" class="text-red-600 hover:text-red-900" @click="confirmDelete(customer)">Eliminar</Link>
+                                        <button @click="confirmDelete(customer)" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -98,8 +139,8 @@ const goToPage = (url) => {
                     </div>
 
                     <!-- Paginación -->
-                    <nav class="mt-4 flex justify-between items-center" aria-label="Pagination">
-                        <div class="flex-1 flex justify-between sm:justify-end">
+                    <nav v-if="customers.links.length > 3" class="mt-4 flex justify-between items-center" aria-label="Pagination">
+                         <div class="flex-1 flex justify-between sm:justify-end">
                             <button
                                 @click="goToPage(customers.prev_page_url)"
                                 :disabled="!customers.prev_page_url"
@@ -121,7 +162,3 @@ const goToPage = (url) => {
         </div>
     </AuthenticatedLayout>
 </template>
-
-<style scoped>
-/* Estilos adicionales si son necesarios */
-</style>

@@ -46,7 +46,7 @@ const formatDate = (dateString) => {
                                     <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ customer.mobile_phone }}</dd>
                                 </div>
                                 <div class="px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                                    <dt class="text-sm font-medium leading-6 text-gray-900">Fecha de Cumpleaños</dt>
+                                    <dt class="text-sm font-medium leading-6 text-gray-900">Fecha de Nacimiento</dt>
                                     <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">{{ formatDate(customer.birthday) }}</dd>
                                 </div>
                             </dl>

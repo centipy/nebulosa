@@ -2,7 +2,8 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\CustomerImportController; // <--- Nuevo controlador para la importación
+use App\Http\Controllers\CustomerImportController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,13 +26,17 @@ Route::middleware('auth')->group(function () {
      Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
      Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+     // --- Rutas de Notificaciones ---
+     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+     Route::patch('/notifications/{notification}', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+     // ---------------------------------
+
      // --- 1. Rutas Específicas PRIMERO ---
-     // Rutas para la importación de clientes desde Excel
+     // ... (resto de tus rutas) ...
      Route::get('/customers/import', [CustomerImportController::class, 'create'])->name('customers.import.create');
      Route::post('/customers/import', [CustomerImportController::class, 'store'])->name('customers.import.store');
 
      // --- 2. Rutas Genéricas (Resource) DESPUÉS ---
-     // Rutas para los clientes
      Route::resource('customers', CustomerController::class);
 });
 
