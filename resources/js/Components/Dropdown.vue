@@ -27,7 +27,10 @@ onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
 
 const widthClass = computed(() => {
     return {
-        48: 'w-48',
+        '48': 'w-48',
+        '60': 'w-60', // Opcional: si quieres un ancho intermedio
+        '80': 'w-80', // <-- El que necesitas para tu notificación
+        '96': 'w-96', // <-- Uno aún más grande por si lo necesitas
     }[props.width.toString()];
 });
 

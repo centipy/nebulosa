@@ -19,25 +19,17 @@ class CustomersImport implements ToModel, WithHeadingRow, WithValidation, WithBa
       */
      public function model(array $row)
      {
-          // Función auxiliar para parsear fechas de Excel
           $parseExcelDate = function ($excelDate) {
-               if (empty($excelDate)) {
+               if (empty($excelDate) || !is_numeric($excelDate)) {
                     return null;
                }
-               if (is_numeric($excelDate)) {
-                    // Convertir fecha numérica de Excel a formato de fecha de PHP
-                    return Date::excelToDateTimeObject($excelDate)->format('Y-m-d');
-               }
-               // Si no es numérica, intentar parsear como string
                try {
-                    return \Carbon\Carbon::parse($excelDate)->format('Y-m-d');
+                    return Date::excelToDateTimeObject($excelDate)->format('Y-m-d');
                } catch (\Exception $e) {
                     return null;
                }
           };
 
-          // Mapea las columnas del CSV/Excel a los campos de tu modelo Customer
-          // Concatena los campos de nombre para crear el 'full_name'
           $fullName = trim(($row['nombre'] ?? '') . ' ' . ($row['segundo_nombre'] ?? '') . ' ' . ($row['apellido_paterno'] ?? '') . ' ' . ($row['apellido_materno'] ?? ''));
 
           return new Customer([
@@ -76,7 +68,13 @@ class CustomersImport implements ToModel, WithHeadingRow, WithValidation, WithBa
                'last_purchase_date' => $parseExcelDate($row['ultima_fecha_de_compra'] ?? null),
                'last_payment_date' => $parseExcelDate($row['ultima_fecha_de_pago'] ?? null),
                'orders' => $row['pedidos'] ?? null,
-               'birthday' => $parseExcelDate($row['fecha_de_cumpleanos'] ?? null),
+
+               // --- LÍNEA PROBLEMÁTICA ELIMINADA ---
+               // 'birthday' => $parseExcelDate($row['fecha_de_cumpleaños'] ?? null), 
+               // Como no existe en el Excel, la eliminamos para que no guarde NULL.
+               // Si en el futuro tu Excel tiene una columna de cumpleaños,
+               // puedes volver a añadir esta línea con el nombre correcto del encabezado.
+
                'telemarketing_observations' => $row['observaciones_telemarketing'] ?? null,
                'advisor_observations' => $row['observaciones_asesor'] ?? null,
           ]);
@@ -86,11 +84,10 @@ class CustomersImport implements ToModel, WithHeadingRow, WithValidation, WithBa
      public function rules(): array
      {
           return [
-               'de_cliente' => 'required|string|unique:customers,customer_id', // Valida que el customer_id sea único
+               'de_cliente' => 'required|string|unique:customers,customer_id',
                'nombre' => 'required|string|max:255',
                'correo_electronico' => 'nullable|email|max:255',
                'telefono_movil' => 'nullable|string|max:20',
-               // Puedes añadir más reglas de validación aquí para otros campos
           ];
      }
 
@@ -105,15 +102,13 @@ class CustomersImport implements ToModel, WithHeadingRow, WithValidation, WithBa
           ];
      }
 
-     // Número de filas a insertar en cada lote
      public function batchSize(): int
      {
-          return 1000; // Inserta 1000 filas a la vez para mejorar el rendimiento
+          return 1000;
      }
 
-     // Número de filas a leer en cada "chunk" (para manejar archivos grandes)
      public function chunkSize(): int
      {
-          return 1000; // Lee 1000 filas a la vez
+          return 1000;
      }
 }

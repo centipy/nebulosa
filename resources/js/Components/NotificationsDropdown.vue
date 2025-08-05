@@ -39,7 +39,7 @@ const markAsRead = async (notification) => {
 
 <template>
     <div class="relative">
-        <Dropdown align="right" width="96">
+        <Dropdown align="right" width="80"> <!-- Ajustado a un ancho mayor: 80 (20rem) -->
             <template #trigger>
                 <span class="inline-flex rounded-md">
                     <button type="button" class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none relative">
@@ -54,24 +54,29 @@ const markAsRead = async (notification) => {
             </template>
 
             <template #content>
-                <div class="p-2">
-                    <h3 class="text-sm font-semibold text-gray-700 px-2">Notificaciones</h3>
+                <div class="p-2 max-h-96 overflow-y-auto"> <!-- Añadimos un alto máximo y scroll -->
+                    <h3 class="text-base font-bold text-gray-700 px-2">Notificaciones</h3>
                     
                     <!-- Notificaciones Nuevas -->
                     <div v-if="newNotifications.length > 0" class="mt-2">
-                        <h4 class="text-xs font-bold text-gray-500 uppercase px-2">Nuevas</h4>
-                        <div v-for="notification in newNotifications" :key="notification.id" class="mt-1 p-2 text-sm text-gray-800 rounded-md hover:bg-gray-100">
-                            <p>{{ notification.data.message }}</p>
-                            <button @click.stop="markAsRead(notification)" class="text-xs text-blue-500 hover:underline mt-1">Marcar como visto</button>
+                        <h4 class="text-sm text-gray-500 px-2">nuevas</h4>
+                        <div v-for="notification in newNotifications" :key="notification.id" class="mt-1 p-2 text-sm text-gray-500 rounded-md hover:bg-gray-100">
+                            <!-- Usamos flexbox para alinear el texto y el botón -->
+                            <div class="flex justify-between items-center">
+                                <p class="flex-1 pr-2">{{ notification.data.message }}</p>
+                                <button @click.stop="markAsRead(notification)" class="text-xs text-blue-500 hover:underline flex-shrink-0">Visto</button>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Notificaciones Vencidas -->
                     <div v-if="overdueNotifications.length > 0" class="mt-4">
-                        <h4 class="text-xs font-bold text-red-500 uppercase px-2">Vencidas</h4>
+                        <h4 class="text-sm text-red-500 px-2">vencidas</h4>
                          <div v-for="notification in overdueNotifications" :key="notification.id" class="mt-1 p-2 text-sm text-gray-800 bg-red-50 rounded-md hover:bg-red-100">
-                            <p>{{ notification.data.message }}</p>
-                            <button @click.stop="markAsRead(notification)" class="text-xs text-blue-500 hover:underline mt-1">Marcar como visto</button>
+                            <div class="flex justify-between items-center">
+                                <p class="flex-1 pr-2">{{ notification.data.message }}</p>
+                                <button @click.stop="markAsRead(notification)" class="text-xs text-blue-500 hover:underline flex-shrink-0">Visto</button>
+                            </div>
                         </div>
                     </div>
 

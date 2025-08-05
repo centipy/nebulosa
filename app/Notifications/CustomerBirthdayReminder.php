@@ -3,11 +3,12 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+// Ya no es necesario: use Illuminate\Contracts\Queue\ShouldQueue; 
 use Illuminate\Notifications\Notification;
 use App\Models\Customer;
 
-class CustomerBirthdayReminder extends Notification implements ShouldQueue
+// --- CAMBIO AQUÍ: Se eliminó "implements ShouldQueue" ---
+class CustomerBirthdayReminder extends Notification
 {
      use Queueable;
 
@@ -28,7 +29,7 @@ class CustomerBirthdayReminder extends Notification implements ShouldQueue
       */
      public function via(object $notifiable): array
      {
-          return ['database']; // Solo guardaremos en la base de datos
+          return ['database'];
      }
 
      /**
@@ -38,7 +39,6 @@ class CustomerBirthdayReminder extends Notification implements ShouldQueue
       */
      public function toArray(object $notifiable): array
      {
-          // El año del cumpleaños se ajusta al año actual para la lógica de "vencidas"
           $birthdayThisYear = $this->customer->birthday->setYear(now()->year);
 
           return [
