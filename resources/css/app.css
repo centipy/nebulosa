@@ -1,0 +1,18 @@
+/* resources/css/app.css */
+@import 'tailwindcss';
+
+/* Directivas @source para la detección automática de contenido en Laravel */
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php'; /* Escanea todos los archivos Blade en resources/ */
+@source '../**/*.js';       /* Escanea todos los archivos JS en resources/ */
+@source '../**/*.vue';      /* Asegura que los componentes Vue también sean escaneados */
+
+/* Aquí puedes agregar tus estilos CSS personalizados o utilizar la directiva @theme para personalizar Tailwind */
+/* Ejemplo de personalización de tema CSS-First con @theme */
+@theme {
+    --font-display: "Satoshi", "sans-serif";
+    --breakpoint-3xl: 1920px;
+    --color-primary-500: #6B46C1;
+    --color-secondary-300: #F6AD55;
+}

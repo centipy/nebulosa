@@ -1,0 +1,38 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerImportController; // <--- Nuevo controlador para la importación
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+});
+
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+     // --- 1. Rutas Específicas PRIMERO ---
+     // Rutas para la importación de clientes desde Excel
+     Route::get('/customers/import', [CustomerImportController::class, 'create'])->name('customers.import.create');
+     Route::post('/customers/import', [CustomerImportController::class, 'store'])->name('customers.import.store');
+
+     // --- 2. Rutas Genéricas (Resource) DESPUÉS ---
+     // Rutas para los clientes
+     Route::resource('customers', CustomerController::class);
+});
+
+require __DIR__.'/auth.php';
